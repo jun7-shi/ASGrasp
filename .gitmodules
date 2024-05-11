@@ -1,0 +1,3 @@
+[submodule "gsnet"]
+	path = gsnet
+	url = https://github.com/jun7-shi/gsnet.git
