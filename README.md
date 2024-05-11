@@ -22,4 +22,4 @@ python infer_mvs_2layer_gsnet.py
 ## Contact
 If you have any questions, please open a github issue or contact us:
 
-Jun Shi: jun7.shi@samsung.cn, Yong A: yong.a@samsung, He Wang: hewang@pku.edu.cn
+Jun Shi: jun7.shi@samsung.com, Yong A: yong.a@samsung.com, He Wang: hewang@pku.edu.cn
