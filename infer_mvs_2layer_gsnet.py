@@ -1,29 +1,18 @@
 import os
 import sys
 import numpy as np
-import argparse
-import time
 import torch
-import torch.nn.functional as F
 import cv2
-import threading
-import pybullet as p
-import copy
-from pathlib import Path
 import open3d as o3d
-from torch.utils.data import DataLoader
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(ROOT_DIR)
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
-from graspnetAPI.graspnet_eval import GraspGroup, GraspNetEval
-sys.path.append("./gsnet")
-from models.graspnet import GraspNet, pred_decode, pred_decode_with_zaxis
+from graspnetAPI.graspnet_eval import GraspGroup
+sys.path.append("./gsnet/pointnet2")
+sys.path.append("./gsnet/utils")
 sys.path.append("./src/core_multilayers")
+from gsnet.models.graspnet import GraspNet, pred_decode
 from raft_mvs_multilayers import RAFTMVS_2Layer
 from dataset.graspnet_dataset import minkowski_collate_fn
-from collision_detector import ModelFreeCollisionDetector, RobotiQCollisionDetector, RobotiQCollisionDetector1
+from collision_detector import ModelFreeCollisionDetector
 from data_utils import CameraInfo, create_point_cloud_from_depth_image, get_workspace_mask
-import MinkowskiEngine as ME
 from D415_camera import CameraMgr
 
 DEBUG_VIS = True
@@ -63,7 +52,7 @@ def load_projmatrix_render_d415():
 class MVSGSNetEval():
     def __init__(self, cfgs):
         self.args = cfgs
-        net = torch.nn.DataParallel(GraspNet(seed_feat_dim=cfgs.seed_feat_dim, GRASPNESS_THRESHOLD=cfgs.graspness_threshold, is_training=False))
+        net = torch.nn.DataParallel(GraspNet(seed_feat_dim=cfgs.seed_feat_dim, graspness_threshold=cfgs.graspness_threshold, is_training=False))
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         net.to(device)
         # Load checkpoint
@@ -147,7 +136,7 @@ class MVSGSNetEval():
             else:
                 objectness_label = np.ones([25000, ])
 
-           ret_dict = {'point_clouds': cloud_sampled.astype(np.float32),
+            ret_dict = {'point_clouds': cloud_sampled.astype(np.float32),
                         'coors': cloud_sampled.astype(np.float32) / 0.005,
                         'feats': np.ones_like(cloud_sampled).astype(np.float32),
                         'full_point_clouds': cloud_masked.astype(np.float32),
@@ -168,21 +157,17 @@ class MVSGSNetEval():
                     end_points = self.gsnet(batch_data)
                 except:
                     return None
-                if self.args.zaxis_threshold>0:
-                    print("filter grasp poses with zaxis threshold.")
-                    grasp_preds = pred_decode_with_zaxis(end_points, self.args.zaxis_threshold, zrot)
-                else:
-                    grasp_preds = pred_decode(end_points)
+                grasp_preds = pred_decode(end_points)
+
             torch.cuda.empty_cache()
             preds = grasp_preds[0].detach().cpu().numpy()
             gg = GraspGroup(preds)
 
-
             if self.args.collision_thresh > 0:
                 cloud = ret_dict['full_point_clouds']
                 cloud = cloud_masked.astype(np.float32)
-                mfcdetector = RobotiQCollisionDetector1(cloud, voxel_size=self.args.voxel_size_cd)
-                collision_mask, iou = mfcdetector.detect(gg, approach_dist=0.05, collision_thresh=self.args.collision_thresh)
+                mfcdetector = ModelFreeCollisionDetector(cloud, voxel_size=self.args.voxel_size_cd)
+                collision_mask = mfcdetector.detect(gg, approach_dist=0.05, collision_thresh=self.args.collision_thresh)
                 gg = gg[~collision_mask]
 
             gg = gg.nms()
@@ -190,10 +175,9 @@ class MVSGSNetEval():
             count = gg.__len__()
             if count <1:
                 return None
-
-            gg = gg[:1]
-            print("grasp width : ", gg.widths)
-            print("grasp score : ", gg.scores)
+            if count > 50:
+                count = 50
+            gg = gg[:count]
 
             # Add the point cloud to the visualizer
             if DEBUG_VIS:
@@ -203,6 +187,9 @@ class MVSGSNetEval():
                 point_cloud.colors = o3d.utility.Vector3dVector(color_sampled.astype(np.float32)/255.0)
                 o3d.visualization.draw_geometries([point_cloud, *grippers])
 
+            gg = gg[:1]
+            print("grasp width : ", gg.widths)
+            print("grasp score : ", gg.scores)
             return gg
 
 if __name__ == '__main__':
@@ -241,10 +228,10 @@ if __name__ == '__main__':
     parser.add_argument('--num_point', type=int, default=25000, help='Point Number [default: 15000]')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch Size during inference [default: 1]')
     parser.add_argument('--voxel_size', type=float, default=0.005, help='Voxel Size for sparse convolution')
-    parser.add_argument('--collision_thresh', type=float, default=0,
+    parser.add_argument('--collision_thresh', type=float, default=0.01,
                         help='Collision Threshold in collision detection [default: 0.01]')
     parser.add_argument('--voxel_size_cd', type=float, default=0.01, help='Voxel Size for collision detection')
-
+    parser.add_argument('--graspness_threshold', type=float, default=0, help='graspness threshold')
 
     args = parser.parse_args()
     eval = MVSGSNetEval(args)
@@ -253,5 +240,5 @@ if __name__ == '__main__':
     rgb_path = f'./test_data/00100_0000_color.png'
     ir1_path = f'./test_data/00100_0000_ir_l.png'
     ir2_path = f'./test_data/00100_0000_ir_r.png' 
-    ggg = eval.infer(rgb_path, ir1_path, ir2_path)
+    gg = eval.infer(rgb_path, ir1_path, ir2_path)
 
