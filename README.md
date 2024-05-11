@@ -12,12 +12,20 @@ Please refer to https://github.com/rhett-chen/graspness_implementation to instal
 ## Checkpoints
 Please download the [checkpoint]() to 'checkpoints/'
 
-
 ## Testing
 Please run
 ```
 python infer_mvs_2layer_gsnet.py
 ```
+
+## Acknowledgement
+Our code is based on these wonderful repos, we appreciate their great works!
+
+* [RAFT-Stereo](https://github.com/princeton-vl/RAFT-Stereo)
+* [IterMVS](https://github.com/FangjinhuaWang/IterMVS)
+* [GraspNet](https://github.com/graspnet)
+* [graspness_implementation](https://github.com/rhett-chen/graspness_implementation)
+* [DREDS](https://github.com/PKU-EPIC/DREDS)
 
 ## Contact
 If you have any questions, please open a github issue or contact us:
