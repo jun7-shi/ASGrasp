@@ -10,7 +10,7 @@ The code has been tested with `Python 3.8`, `PyTorch 1.9.1` and `Cuda 11.1`
 Please refer to https://github.com/rhett-chen/graspness_implementation to install GSNet
 
 ## Checkpoints
-Please download the [checkpoint]() to 'checkpoints/'
+Please download the [checkpoints](https://drive.google.com/drive/folders/1omayRF-kl_HzkHRs9Ln7Dfn8L7dRUT9S?usp=sharing) to 'checkpoints/'
 
 ## Testing
 Please run
