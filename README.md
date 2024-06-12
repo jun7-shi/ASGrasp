@@ -2,6 +2,7 @@
 This repository contains the source code for our paper:
 [ASGrasp: Generalizable Transparent Object Reconstruction and 6-DoF Grasp Detection from RGB-D Active Stereo Camera](https://arxiv.org/pdf/2405.05648.pdf)
 
+For more information, please visit our [**project page**](https://pku-epic.github.io/ASGrasp/).
 
 ## Requirements
 The code has been tested with `Python 3.8`, `PyTorch 1.9.1` and `Cuda 11.1`
